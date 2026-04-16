@@ -20,6 +20,17 @@ dir.create(fig_iafd_dir, recursive = TRUE, showWarnings = FALSE)
 dir.create(fig_fdc_dir, recursive = TRUE, showWarnings = FALSE)
 
 # --------------------------------------------------
+# Check input files
+# --------------------------------------------------
+if (!file.exists(monthly_path)) {
+  stop("Missing file: ", normalizePath(monthly_path, winslash = "/", mustWork = FALSE))
+}
+
+if (!file.exists(fdc_path)) {
+  stop("Missing file: ", normalizePath(fdc_path, winslash = "/", mustWork = FALSE))
+}
+
+# --------------------------------------------------
 # Scenario labels and titles
 # --------------------------------------------------
 scenario_labels <- c(
@@ -90,18 +101,18 @@ smooth_series <- function(df, value_col, span = 0.6) {
   model_data <- df %>%
     select(month, value = all_of(value_col)) %>%
     filter(!is.na(value))
-
+  
   if (nrow(model_data) < 4) {
     return(rep(NA_real_, length(smooth_months)))
   }
-
+  
   fit <- loess(
     value ~ month,
     data = model_data,
     span = span,
     control = loess.control(surface = "direct")
   )
-
+  
   as.numeric(predict(fit, newdata = data.frame(month = smooth_months)))
 }
 
@@ -115,7 +126,7 @@ smooth_iafd <- function(df, span = 0.6) {
       Qmax    = smooth_series(df, "Qmax", span = span)
     ) %>%
     tidyr::drop_na()
-
+  
   if (nrow(out) == 0) {
     out <- df %>%
       transmute(
@@ -127,7 +138,7 @@ smooth_iafd <- function(df, span = 0.6) {
         Qmax
       )
   }
-
+  
   out
 }
 
@@ -137,7 +148,7 @@ smooth_iafd <- function(df, span = 0.6) {
 for (sc in unique(iafd_summary$scenario)) {
   raw_df <- iafd_summary %>% filter(scenario == sc)
   plot_df <- smooth_iafd(raw_df, span = 0.6)
-
+  
   p <- ggplot(plot_df, aes(x = month)) +
     geom_ribbon(aes(ymin = Qmin, ymax = Qmax), fill = "grey70", alpha = 0.18) +
     geom_ribbon(aes(ymin = Q25p, ymax = Q75p), fill = "grey50", alpha = 0.18) +
@@ -161,11 +172,11 @@ for (sc in unique(iafd_summary$scenario)) {
       ),
       breaks = c("IAFDmedian", "IAFD25p", "IAFD75p", "IAFDmin", "IAFDmax"),
       labels = c(
-        paste0("IAFDmedian,", scenario_labels[[sc]]),
-        paste0("IAFD25p,", scenario_labels[[sc]]),
-        paste0("IAFD75p,", scenario_labels[[sc]]),
-        paste0("IAFDmin,", scenario_labels[[sc]]),
-        paste0("IAFDmax,", scenario_labels[[sc]])
+        paste0("IAFDmedian, ", scenario_labels[[sc]]),
+        paste0("IAFD25p, ", scenario_labels[[sc]]),
+        paste0("IAFD75p, ", scenario_labels[[sc]]),
+        paste0("IAFDmin, ", scenario_labels[[sc]]),
+        paste0("IAFDmax, ", scenario_labels[[sc]])
       ),
       name = NULL
     ) +
@@ -179,15 +190,20 @@ for (sc in unique(iafd_summary$scenario)) {
       plot.title = element_text(face = "bold", hjust = 0.5, size = 16),
       panel.grid.minor = element_blank(),
       legend.position = "right",
-      legend.text = element_text(size = 11)
+      legend.text = element_text(size = 11),
+      plot.background = element_rect(fill = "white", color = NA),
+      panel.background = element_rect(fill = "white", color = NA),
+      legend.background = element_rect(fill = "white", color = NA),
+      legend.box.background = element_rect(fill = "white", color = NA)
     )
-
+  
   ggsave(
     filename = file.path(fig_iafd_dir, paste0("iafd_", sc, ".png")),
     plot = p,
     width = 10,
     height = 6.2,
-    dpi = 300
+    dpi = 300,
+    bg = "white"
   )
 }
 
@@ -220,7 +236,7 @@ fdc_raw <- fdc_raw %>%
 # --------------------------------------------------
 for (sc in unique(fdc_raw$scenario)) {
   plot_df <- fdc_raw %>% filter(scenario == sc)
-
+  
   p <- ggplot(plot_df, aes(x = exceedance)) +
     geom_ribbon(aes(ymin = Q_min, ymax = Q_max, fill = "Min–Max"), alpha = 0.55) +
     geom_ribbon(aes(ymin = Q_p25, ymax = Q_p75, fill = "P25–P75 (IQR)"), alpha = 0.75) +
@@ -250,17 +266,22 @@ for (sc in unique(fdc_raw$scenario)) {
       plot.title = element_text(face = "bold", size = 16),
       panel.grid.minor = element_blank(),
       legend.title = element_text(face = "bold"),
-      legend.text = element_text(size = 11)
+      legend.text = element_text(size = 11),
+      plot.background = element_rect(fill = "white", color = NA),
+      panel.background = element_rect(fill = "white", color = NA),
+      legend.background = element_rect(fill = "white", color = NA),
+      legend.box.background = element_rect(fill = "white", color = NA)
     )
-
+  
   ggsave(
     filename = file.path(fig_fdc_dir, paste0("fdc_", sc, ".png")),
     plot = p,
     width = 10,
     height = 6.2,
-    dpi = 300
+    dpi = 300,
+    bg = "white"
   )
 }
 
-message("Saved IAFD plots to: ", fig_iafd_dir)
-message("Saved FDC plots to: ", fig_fdc_dir)
+message("Saved IAFD plots to: ", normalizePath(fig_iafd_dir, winslash = "/", mustWork = FALSE))
+message("Saved FDC plots to: ", normalizePath(fig_fdc_dir, winslash = "/", mustWork = FALSE))
